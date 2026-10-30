@@ -98,3 +98,14 @@ if st.sidebar.button("🚀 开始推荐", type="primary"):
                     # 处理没有评分的情况
                     rating_display = f"⭐ {row['rating']}/10" if row['rating'] > 0 else "暂无评分"
                     st.metric("IMDb 评分", rating_display, f"{row['votes']:,} 人评价")
+
+import random
+
+# 假设 results 是你筛选出来的 DataFrame
+if not results.empty:
+    if st.button("🎲 不想选？帮我随便挑一部！"):
+        random_movie = results.sample(1).iloc[0]
+        st.balloons() # 撒花特效
+        st.success(f"✨ 命中注定就是它：**{random_movie['title']}** ({random_movie['year']})")
+        st.info(f"理由：{random_movie['reason']}")
+        st.write(random_movie['plot'])
