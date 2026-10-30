@@ -105,25 +105,88 @@ if st.session_state.recommend_results is not None:
     else:
         st.success(f"为你找到了 {len(results)} 部电影！")
         
-        # 👇 盲盒按钮
+        # 👇 盲盒按钮（注意：它应该在 else 里面，缩进 8 个空格）
         if st.button("🎲 不想选？帮我随便挑一部！"):
             random_movie = results.sample(1).iloc[0]
             st.balloons() 
-            st.success(f"✨ 命中注定就是它：**{random_movie['title']}** ({random_movie['year']})")
-            st.info(f"理由：{random_movie['reason']}")
-            st.write(random_movie['plot'])
             
-        st.divider() 
+            # --- 美化后的盲盒卡片 ---
+            title = random_movie['title']
+            year = random_movie['year']
+            genre = random_movie['genre'].upper()
+            reason = random_movie['reason']
+            plot = str(random_movie['plot'])[:250] + "..." if len(str(random_movie['plot'])) > 250 else random_movie['plot']
+            
+            # 获取海报
+            poster = random_movie.get('poster', 'N/A')
+            if poster == 'N/A' or pd.isna(poster):
+                poster = "https://via.placeholder.com/150x220?text=No+Poster"
+            
+            # 自定义 HTML 和 CSS
+            card_html = f"""
+            <style>
+                .blindbox-card {{
+                    background: linear-gradient(135deg, #1e1e2f, #2a2a40);
+                    border-radius: 16px;
+                    padding: 24px;
+                    color: white;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                    border: 1px solid #3c3c5a;
+                    margin-top: 10px;
+                    margin-bottom: 30px;
+                    display: flex;
+                    gap: 20px;
+                }}
+                .blindbox-card img {{
+                    width: 150px;
+                    height: 220px;
+                    object-fit: cover;
+                    border-radius: 8px;
+                }}
+                .blindbox-content {{ flex: 1; }}
+                .blindbox-card h2 {{ margin-top: 0; color: #ffd700; font-size: 26px; }}
+                .blindbox-card .year {{ font-size: 16px; color: #a0a0b0; font-weight: normal; }}
+                .custom-tag {{ display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: bold; margin-right: 10px; margin-bottom: 10px; }}
+                .tag-genre {{ background-color: rgba(76, 175, 80, 0.2); color: #4CAF50; border: 1px solid #4CAF50; }}
+                .tag-reason {{ background-color: rgba(33, 150, 243, 0.2); color: #2196F3; border: 1px solid #2196F3; }}
+                .blindbox-card p {{ color: #cccccc; font-size: 15px; line-height: 1.6; }}
+            </style>
+            
+            <div class="blindbox-card">
+                <img src="{poster}" alt="Poster">
+                <div class="blindbox-content">
+                    <h2>✨ {title} <span class="year">({year})</span></h2>
+                    <div>
+                        <span class="custom-tag tag-genre">🎬 {genre}</span>
+                        <span class="custom-tag tag-reason">💡 {reason}</span>
+                    </div>
+                    <p>{plot}</p>
+                </div>
+            </div>
+            """
+            st.markdown(card_html, unsafe_allow_html=True)
         
-        # 👇 循环展示结果卡片
+        st.divider() # 分割线
+        
+        # 👇 循环展示结果卡片（带海报）（缩进 8 个空格）
         for _, row in results.iterrows():
             with st.container(border=True):
-                col1, col2 = st.columns([3, 1])
-                with col1:
+                col_img, col_text, col_data = st.columns([1, 3, 1.5]) 
+                
+                with col_img:
+                    poster = row.get('poster', 'N/A')
+                    if poster != 'N/A' and pd.notna(poster):
+                        st.image(poster, use_container_width=True)
+                    else:
+                        st.image("https://via.placeholder.com/150x220?text=No+Poster", use_container_width=True)
+                        
+                with col_text:
                     st.markdown(f"### {row['title']} ({row['year']})")
-                    st.markdown(f"**类型**: {row['genre'].capitalize()} | **推荐理由**: `{row['reason']}`")
+                    st.markdown(f"**类型**: {row['genre'].capitalize()}")
+                    st.markdown(f"**推荐理由**: `{row['reason']}`")
                     st.text(row['plot'])
-                with col2:
+                    
+                with col_data:
                     st.metric("匹配度得分", f"{row['score']}")
                     rating_display = f"⭐ {row['rating']}/10" if row['rating'] > 0 else "暂无评分"
                     st.metric("IMDb 评分", rating_display, f"{row['votes']:,} 人评价")
