@@ -110,19 +110,17 @@ if st.session_state.recommend_results is not None:
             random_movie = results.sample(1).iloc[0]
             st.balloons() 
             
-            # --- 美化后的盲盒卡片 ---
             title = random_movie['title']
             year = random_movie['year']
             genre = random_movie['genre'].upper()
             reason = random_movie['reason']
-            plot = str(random_movie['plot'])[:250] + "..." if len(str(random_movie['plot'])) > 250 else random_movie['plot']
+            plot = str(random_movie['plot'])[:300] + "..."
             
             # 获取海报
             poster = random_movie.get('poster', 'N/A')
             if poster == 'N/A' or pd.isna(poster):
                 poster = "https://via.placeholder.com/150x220?text=No+Poster"
             
-            # 自定义 HTML 和 CSS
             card_html = f"""
             <style>
                 .blindbox-card {{
@@ -134,7 +132,7 @@ if st.session_state.recommend_results is not None:
                     border: 1px solid #3c3c5a;
                     margin-top: 10px;
                     margin-bottom: 30px;
-                    display: flex;
+                    display: flex; /* 用 flex 布局让图片和文字左右排布 */
                     gap: 20px;
                 }}
                 .blindbox-card img {{
@@ -171,9 +169,11 @@ if st.session_state.recommend_results is not None:
         # 👇 循环展示结果卡片（带海报）（缩进 8 个空格）
         for _, row in results.iterrows():
             with st.container(border=True):
+                # 调整列宽比例：海报(1)，文字(3)，数据(1)
                 col_img, col_text, col_data = st.columns([1, 3, 1.5]) 
                 
                 with col_img:
+                    # 判断有没有海报，如果没有给个默认占位图
                     poster = row.get('poster', 'N/A')
                     if poster != 'N/A' and pd.notna(poster):
                         st.image(poster, use_container_width=True)
