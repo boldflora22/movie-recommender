@@ -92,7 +92,7 @@ if st.sidebar.button("🚀 开始推荐", type="primary"):
             st.info(f"理由：{random_movie['reason']}")
             st.write(random_movie['plot'])
         # 循环展示结果卡片
-        for _, row in results.iterrows():
+    for _, row in results.iterrows():
             with st.container(border=True):
                 col1, col2 = st.columns([3, 1])
                 with col1:
