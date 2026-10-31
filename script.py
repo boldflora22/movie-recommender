@@ -116,10 +116,13 @@ if st.session_state.recommend_results is not None:
             reason = random_movie['reason']
             plot = str(random_movie['plot'])[:300] + "..."
             
+
             # 获取海报
             poster = random_movie.get('poster', 'N/A')
-            if poster == 'N/A' or pd.isna(poster):
-                poster = "https://via.placeholder.com/150x220?text=No+Poster"
+            if poster == 'N/A' or pd.isna(poster) or not str(poster).startswith("http"):
+                # 降级方案：没海报就用随机风景图
+                poster = f"https://picsum.photos/seed/{random_movie['title']}/200/300"
+
             
             card_html = f"""
             <style>
@@ -171,15 +174,17 @@ if st.session_state.recommend_results is not None:
             with st.container(border=True):
                 # 调整列宽比例：海报(1)，文字(3)，数据(1)
                 col_img, col_text, col_data = st.columns([1, 3, 1.5]) 
-                
-                with col_img:
-                    # 判断有没有海报，如果没有给个默认占位图
+
+               with col_img:
                     poster = row.get('poster', 'N/A')
-                    if poster != 'N/A' and pd.notna(poster):
+                    # 如果有真实海报，且链接是正常的 http 开头
+                    if poster != 'N/A' and pd.notna(poster) and str(poster).startswith("http"):
                         st.image(poster, use_container_width=True)
                     else:
-                        st.image("https://via.placeholder.com/150x220?text=No+Poster", use_container_width=True)
-                        
+                        # 降级方案：用电影名作为种子，生成一张专属的高级随机图
+                        fallback_url = f"https://picsum.photos/seed/{row['title']}/200/300"
+                        st.image(fallback_url, use_container_width=True)
+               
                 with col_text:
                     st.markdown(f"### {row['title']} ({row['year']})")
                     st.markdown(f"**类型**: {row['genre'].capitalize()}")
