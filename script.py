@@ -175,7 +175,7 @@ if st.session_state.recommend_results is not None:
                 # 调整列宽比例：海报(1)，文字(3)，数据(1)
                 col_img, col_text, col_data = st.columns([1, 3, 1.5]) 
 
-               with col_img:
+                with col_img:
                     poster = row.get('poster', 'N/A')
                     # 如果有真实海报，且链接是正常的 http 开头
                     if poster != 'N/A' and pd.notna(poster) and str(poster).startswith("http"):
