@@ -46,7 +46,7 @@ for g in all_genres:
 
 # 2. 年份设置
 st.sidebar.subheader("2. Release Year")
-year_mode = st.sidebar.radio(""Year Restriction Mode", ["No restriction", "Prioritize recent releases", "Strictly limit by year"])
+year_mode = st.sidebar.radio("Year Restriction Mode", ["No restriction", "Prioritize recent films", "Strictly limit years"])
 if year_mode == "Strictly limit by year":
     year_range = st.sidebar.slider("Select a year range", 1900, 2024, (2015, 2024))
     recent_boost = 0.0
