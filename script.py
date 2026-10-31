@@ -2,57 +2,52 @@ import streamlit as st
 import pandas as pd
 from engine import build_tfidf, recommend_with_weights
 
-# 页面配置
-st.set_page_config(page_title="Smart Movie Picker", page_icon="🎬", layout="wide")
+st.set_page_config(page_title="Smart Movie Recommender", page_icon="🎬", layout="wide")
 
-# 缓存加载数据，避免每次滑动条都重新读取，提升速度
 @st.cache_resource
 def load_data():
     try:
-        # 优先读取带评分的数据
         df = pd.read_csv("movies_enriched.csv", encoding="utf-8-sig")
     except FileNotFoundError:
-        # 如果没找到，降级读取基础数据并生成模拟分数
         df = pd.read_csv("movies_clean.csv", encoding="utf-8-sig")
         import numpy as np
         np.random.seed(42)
         df["rating"] = np.random.uniform(5.0, 9.5, len(df))
         df["vote_count"] = np.random.randint(100, 500000, len(df))
-        st.info("💡 Note: Using basic data + simulated ratings.")
+        df["poster"] = "N/A"
+        st.info("💡 Note: Using base data with simulated ratings.")
         
     df["rating"] = pd.to_numeric(df["rating"], errors="coerce").fillna(0)
     df["vote_count"] = pd.to_numeric(df["vote_count"], errors="coerce").fillna(0)
+    df["poster"] = df["poster"].fillna("N/A")
     vectorizer, matrix = build_tfidf(df)
     return df, vectorizer, matrix
 
-# ================= 加载数据 =================
 try:
     df, vectorizer, tfidf_matrix = load_data()
 except Exception as e:
-    st.error(f"数据加载失败，请检查文件是否存在。错误信息：{e}")
+    st.error(f"Failed to load data: {e}")
     st.stop()
 
-# ================= 侧边栏：用户偏好设置 =================
-st.sidebar.header("🎯 Your viewing preferences")
+# ================= Sidebar =================
+st.sidebar.header("🎯 Your Preferences")
 
-# 1. 类型滑条
 st.sidebar.subheader("1. Genre Preferences")
-st.sidebar.caption("Positive: desire to watch; negative: lack thereof")
+st.sidebar.caption("Positive = like, Negative = dislike")
 all_genres = ["science fiction", "action", "comedy", "romance", "horror", "thriller", "crime", "drama"]
 genre_weights = {}
 for g in all_genres:
     if g in df["primary_genre"].values:
         genre_weights[g] = st.sidebar.slider(f"{g.capitalize()}", -1.0, 1.0, 0.0, 0.1)
 
-# 2. 年份设置
 st.sidebar.subheader("2. Release Year")
-year_mode = st.sidebar.radio("Year Restriction Mode", ["No restriction", "Prioritize recent films", "Strictly limit years"])
-if year_mode == "Strictly limit years":
-    year_range = st.sidebar.slider("Select a year range", 1900, 2024, (2015, 2024))
+year_mode_ui = st.sidebar.radio("Year Restriction Mode", ["No restriction", "Prioritize recent", "Strictly limit years"])
+if year_mode_ui == "Strictly limit years":
+    year_range = st.sidebar.slider("Select year range", 1900, 2024, (2015, 2024))
     recent_boost = 0.0
     y_mode = "hard"
-elif year_mode == "Prioritize recent releases":
-    recent_boost = st.sidebar.slider("Degree of Added Value for New Releases", 0.0, 1.0, 0.5, 0.1)
+elif year_mode_ui == "Prioritize recent":
+    recent_boost = st.sidebar.slider("Recency boost", 0.0, 1.0, 0.5, 0.1)
     year_range = (1900, 2024)
     y_mode = "soft"
 else:
@@ -60,29 +55,24 @@ else:
     year_range = (1900, 2024)
     y_mode = "off"
 
-# 3. 大众 vs 小众
-st.sidebar.subheader("3. Reputation Tendency")
-st.sidebar.caption("← Niche hidden gem | Mainstream crowd-pleaser →")
+st.sidebar.subheader("3. Popularity")
+st.sidebar.caption("← Niche gems | Mainstream →")
 popularity_weight = st.sidebar.slider(" ", -1.0, 1.0, 0.0, 0.1)
 
-# 4. 氛围搜索
-st.sidebar.subheader("4. Atmosphere Keywords")
-st.sidebar.caption("e.g. mind-bending, romantic, funny")
-mood_text = st.sidebar.text_input("e.g. space adventure")
+st.sidebar.subheader("4. Mood Keywords")
+st.sidebar.caption("e.g., mind-bending, romantic, funny")
+mood_text = st.sidebar.text_input("Enter keywords", "")
 
-# 推荐数量
 top_n = st.sidebar.number_input("Number of recommendations", 5, 30, 10)
 
-# ================= 主界面 =================
-st.title("🎬 Intelligent Movie Selection System")
-st.markdown("Drag the slider on the left to customize your own watchlist!")
+# ================= Main UI =================
+st.title("🎬 Smart Movie Recommender")
+st.markdown("Adjust the sliders on the left to customize your watchlist!")
 
-# 初始化 session_state，用来记住推荐结果
 if "recommend_results" not in st.session_state:
     st.session_state.recommend_results = None
 
-# 只有当点击侧边栏的“开始推荐”时，才去计算
-if st.sidebar.button("🚀 Start recommending", type="primary"):
+if st.sidebar.button("🚀 Start Recommendation", type="primary"):
     config = {
         "genre_weights": genre_weights,
         "year_mode": y_mode,
@@ -93,20 +83,19 @@ if st.sidebar.button("🚀 Start recommending", type="primary"):
         "top_n": top_n
     }
 
-    with st.spinner("Finding movies for you..."):
+    with st.spinner("Filtering movies for you..."):
         st.session_state.recommend_results = recommend_with_weights(df, tfidf_matrix, vectorizer, config)
 
-# 只要 session_state 里有结果，就展示出来
 if st.session_state.recommend_results is not None:
     results = st.session_state.recommend_results
     
     if results.empty:
-        st.warning("No movies match your criteria. Try broadening your filters!")
+        st.warning("No movies found matching your criteria. Try relaxing the conditions!")
     else:
-        st.success(f"We found  {len(results)} movies for you!")
+        st.success(f"Found {len(results)} movies for you!")
         
-        # 👇 盲盒按钮（注意：它应该在 else 里面，缩进 8 个空格）
-        if st.button("🎲 Surprise me!"):
+        # 👇 Blind Box
+        if st.button("🎲 Can't decide? Pick one for me!"):
             random_movie = results.sample(1).iloc[0]
             st.balloons() 
             
@@ -116,13 +105,10 @@ if st.session_state.recommend_results is not None:
             reason = random_movie['reason']
             plot = str(random_movie['plot'])[:300] + "..."
             
-
-            # 获取海报
+            # Poster Fallback
             poster = random_movie.get('poster', 'N/A')
             if poster == 'N/A' or pd.isna(poster) or not str(poster).startswith("http"):
-                # 降级方案：没海报就用随机风景图
                 poster = f"https://picsum.photos/seed/{random_movie['title']}/200/300"
-
             
             card_html = f"""
             <style>
@@ -135,7 +121,7 @@ if st.session_state.recommend_results is not None:
                     border: 1px solid #3c3c5a;
                     margin-top: 10px;
                     margin-bottom: 30px;
-                    display: flex; /* 用 flex 布局让图片和文字左右排布 */
+                    display: flex;
                     gap: 20px;
                 }}
                 .blindbox-card img {{
@@ -167,31 +153,28 @@ if st.session_state.recommend_results is not None:
             """
             st.markdown(card_html, unsafe_allow_html=True)
         
-        st.divider() # 分割线
+        st.divider() 
         
-        # 👇 循环展示结果卡片（带海报）（缩进 8 个空格）
+        # 👇 List Cards
         for _, row in results.iterrows():
             with st.container(border=True):
-                # 调整列宽比例：海报(1)，文字(3)，数据(1)
                 col_img, col_text, col_data = st.columns([1, 3, 1.5]) 
 
                 with col_img:
                     poster = row.get('poster', 'N/A')
-                    # 如果有真实海报，且链接是正常的 http 开头
                     if poster != 'N/A' and pd.notna(poster) and str(poster).startswith("http"):
                         st.image(poster, use_container_width=True)
                     else:
-                        # 降级方案：用电影名作为种子，生成一张专属的高级随机图
                         fallback_url = f"https://picsum.photos/seed/{row['title']}/200/300"
                         st.image(fallback_url, use_container_width=True)
                
                 with col_text:
                     st.markdown(f"### {row['title']} ({row['year']})")
                     st.markdown(f"**Genre**: {row['genre'].capitalize()}")
-                    st.markdown(f"**Why recommended**: `{row['reason']}`")
+                    st.markdown(f"**Reason**: `{row['reason']}`")
                     st.text(row['plot'])
                     
                 with col_data:
-                    st.metric("Match score", f"{row['score']}")
-                    rating_display = f"⭐ {row['rating']}/10" if row['rating'] > 0 else "No rating yet"
-                    st.metric("IMDb Rating", rating_display, f"{row['votes']:,} ratings")
+                    st.metric("Match Score", f"{row['score']}")
+                    rating_display = f"⭐ {row['rating']}/10" if row['rating'] > 0 else "No rating"
+                    st.metric("IMDb Rating", rating_display, f"{row['votes']:,} votes")
