@@ -3,7 +3,7 @@ import pandas as pd
 from engine import build_tfidf, recommend_with_weights
 
 # 页面配置
-st.set_page_config(page_title="智能电影选片", page_icon="🎬", layout="wide")
+st.set_page_config(page_title="Smart Movie Picker", page_icon="🎬", layout="wide")
 
 # 缓存加载数据，避免每次滑动条都重新读取，提升速度
 @st.cache_resource
@@ -18,7 +18,7 @@ def load_data():
         np.random.seed(42)
         df["rating"] = np.random.uniform(5.0, 9.5, len(df))
         df["vote_count"] = np.random.randint(100, 500000, len(df))
-        st.info("💡 提示：当前使用的是基础数据+模拟评分。")
+        st.info("💡 Note: Using basic data + simulated ratings.")
         
     df["rating"] = pd.to_numeric(df["rating"], errors="coerce").fillna(0)
     df["vote_count"] = pd.to_numeric(df["vote_count"], errors="coerce").fillna(0)
@@ -33,11 +33,11 @@ except Exception as e:
     st.stop()
 
 # ================= 侧边栏：用户偏好设置 =================
-st.sidebar.header("🎯 你的观影偏好")
+st.sidebar.header("🎯 Your viewing preferences")
 
 # 1. 类型滑条
-st.sidebar.subheader("1. 类型偏好")
-st.sidebar.caption("正值表示想看，负值表示不想看")
+st.sidebar.subheader("1. Genre Preferences")
+st.sidebar.caption("Positive: desire to watch; negative: lack thereof")
 all_genres = ["science fiction", "action", "comedy", "romance", "horror", "thriller", "crime", "drama"]
 genre_weights = {}
 for g in all_genres:
@@ -45,14 +45,14 @@ for g in all_genres:
         genre_weights[g] = st.sidebar.slider(f"{g.capitalize()}", -1.0, 1.0, 0.0, 0.1)
 
 # 2. 年份设置
-st.sidebar.subheader("2. 上映年份")
-year_mode = st.sidebar.radio("年份限制模式", ["不限", "优先近年新片", "严格限定年份"])
-if year_mode == "严格限定年份":
-    year_range = st.sidebar.slider("选择年份区间", 1900, 2024, (2015, 2024))
+st.sidebar.subheader("2. Release Year")
+year_mode = st.sidebar.radio(""Year Restriction Mode", ["No restriction", "Prioritize recent releases", "Strictly limit by year"])
+if year_mode == "Strictly limit by year":
+    year_range = st.sidebar.slider("Select a year range", 1900, 2024, (2015, 2024))
     recent_boost = 0.0
     y_mode = "hard"
-elif year_mode == "优先近年新片":
-    recent_boost = st.sidebar.slider("新片加分强度", 0.0, 1.0, 0.5, 0.1)
+elif year_mode == "Prioritize recent releases":
+    recent_boost = st.sidebar.slider("Degree of Added Value for New Releases", 0.0, 1.0, 0.5, 0.1)
     year_range = (1900, 2024)
     y_mode = "soft"
 else:
@@ -61,28 +61,28 @@ else:
     y_mode = "off"
 
 # 3. 大众 vs 小众
-st.sidebar.subheader("3. 口碑倾向")
-st.sidebar.caption("← 偏小众宝藏 | 偏大众口碑 →")
+st.sidebar.subheader("3. Reputation Tendency")
+st.sidebar.caption("← Niche hidden gem | Mainstream crowd-pleaser →")
 popularity_weight = st.sidebar.slider(" ", -1.0, 1.0, 0.0, 0.1)
 
 # 4. 氛围搜索
-st.sidebar.subheader("4. 氛围关键词")
-st.sidebar.caption("输入英文效果更好，如: mind-bending, romantic, funny")
-mood_text = st.sidebar.text_input("例如：space adventure")
+st.sidebar.subheader("4. Atmosphere Keywords")
+st.sidebar.caption("e.g. mind-bending, romantic, funny")
+mood_text = st.sidebar.text_input("e.g. space adventure")
 
 # 推荐数量
-top_n = st.sidebar.number_input("推荐数量", 5, 30, 10)
+top_n = st.sidebar.number_input("Number of recommendations", 5, 30, 10)
 
 # ================= 主界面 =================
-st.title("🎬 智能电影选片系统")
-st.markdown("拖动左侧滑条，定制你的专属片单！")
+st.title("🎬 Intelligent Movie Selection System")
+st.markdown("Drag the slider on the left to customize your own watchlist!")
 
 # 初始化 session_state，用来记住推荐结果
 if "recommend_results" not in st.session_state:
     st.session_state.recommend_results = None
 
 # 只有当点击侧边栏的“开始推荐”时，才去计算
-if st.sidebar.button("🚀 开始推荐", type="primary"):
+if st.sidebar.button("🚀 Start recommending", type="primary"):
     config = {
         "genre_weights": genre_weights,
         "year_mode": y_mode,
@@ -93,7 +93,7 @@ if st.sidebar.button("🚀 开始推荐", type="primary"):
         "top_n": top_n
     }
 
-    with st.spinner("正在为你筛选电影..."):
+    with st.spinner("Finding movies for you..."):
         st.session_state.recommend_results = recommend_with_weights(df, tfidf_matrix, vectorizer, config)
 
 # 只要 session_state 里有结果，就展示出来
@@ -101,12 +101,12 @@ if st.session_state.recommend_results is not None:
     results = st.session_state.recommend_results
     
     if results.empty:
-        st.warning("没有找到符合你要求的电影，试试放宽一下条件吧！")
+        st.warning("No movies match your criteria. Try broadening your filters!")
     else:
-        st.success(f"为你找到了 {len(results)} 部电影！")
+        st.success(f"We found  {len(results)} movies for you!")
         
         # 👇 盲盒按钮（注意：它应该在 else 里面，缩进 8 个空格）
-        if st.button("🎲 不想选？帮我随便挑一部！"):
+        if st.button("🎲 Surprise me!"):
             random_movie = results.sample(1).iloc[0]
             st.balloons() 
             
@@ -187,11 +187,11 @@ if st.session_state.recommend_results is not None:
                
                 with col_text:
                     st.markdown(f"### {row['title']} ({row['year']})")
-                    st.markdown(f"**类型**: {row['genre'].capitalize()}")
-                    st.markdown(f"**推荐理由**: `{row['reason']}`")
+                    st.markdown(f"**Genre**: {row['genre'].capitalize()}")
+                    st.markdown(f"**Why recommended**: `{row['reason']}`")
                     st.text(row['plot'])
                     
                 with col_data:
-                    st.metric("匹配度得分", f"{row['score']}")
-                    rating_display = f"⭐ {row['rating']}/10" if row['rating'] > 0 else "暂无评分"
-                    st.metric("IMDb 评分", rating_display, f"{row['votes']:,} 人评价")
+                    st.metric("Match score", f"{row['score']}")
+                    rating_display = f"⭐ {row['rating']}/10" if row['rating'] > 0 else "No rating yet"
+                    st.metric("IMDb Rating", rating_display, f"{row['votes']:,} ratings")
