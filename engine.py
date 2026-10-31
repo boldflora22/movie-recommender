@@ -38,14 +38,16 @@ def recommend_with_weights(df, tfidf_matrix, vectorizer, config):
                 total_score[i] += 0.4 * (weight_sum / len(genres))
                 liked = [g for g in genres if config["genre_weights"].get(g, 0) > 0.3]
                 if liked:
-                    reasons[i].append(f"类型契合({','.join(liked)})")
+                    reasons[i].append(f"Genre match({','.join(liked)})")
 
     if config.get("mood_text"):
         query_vec = vectorizer.transform([clean_model_text(config["mood_text"])])
         sim_scores = cosine_similarity(query_vec, tfidf_matrix).ravel()
         total_score += 0.3 * normalize(sim_scores)
         for i in np.where(sim_scores > 0)[0]:
-            reasons[i].append("剧情氛围相符")
+            reasons[i].append("Similar story and mood
+
+")
 
     years = df["year"].to_numpy(dtype=float)
     if config.get("year_mode") == "hard":
@@ -55,7 +57,7 @@ def recommend_with_weights(df, tfidf_matrix, vectorizer, config):
         recency = normalize(years - years.min())
         total_score += 0.15 * config["recent_boost"] * recency
         for i in np.where(recency > 0.8)[0]:
-            reasons[i].append("近年新片")
+            reasons[i].append("Recent releases")
 
     if config.get("popularity_weight", 0) != 0:
         votes = df["vote_count"].fillna(0).to_numpy()
@@ -66,11 +68,11 @@ def recommend_with_weights(df, tfidf_matrix, vectorizer, config):
         if config["popularity_weight"] > 0:
             total_score += 0.15 * config["popularity_weight"] * ratings * pop_score
             for i in np.where((pop_score > 0.8) & (ratings > 0.7))[0]:
-                reasons[i].append("大众高分")
+                reasons[i].append("Mainstream crowd-pleaser")
         else:
             total_score += 0.15 * abs(config["popularity_weight"]) * ratings * (1 - pop_score)
             for i in np.where((pop_score < 0.3) & (ratings > 0.6))[0]:
-                reasons[i].append("冷门宝藏")
+                reasons[i].append("Niche hidden gem")
 
 
     ranked_indices = np.argsort(total_score)[::-1]
@@ -81,7 +83,9 @@ def recommend_with_weights(df, tfidf_matrix, vectorizer, config):
             break
 
         row = df.iloc[idx]
-        reason_str = "；".join(dict.fromkeys(reasons[idx])) if reasons[idx] else "综合推荐"
+        reason_str = "；".join(dict.fromkeys(reasons[idx])) if reasons[idx] else "Overall recommendation
+
+"
 
         results.append({
             "title": row["title"],
