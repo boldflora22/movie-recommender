@@ -45,9 +45,7 @@ def recommend_with_weights(df, tfidf_matrix, vectorizer, config):
         sim_scores = cosine_similarity(query_vec, tfidf_matrix).ravel()
         total_score += 0.3 * normalize(sim_scores)
         for i in np.where(sim_scores > 0)[0]:
-            reasons[i].append("Similar story and mood
-
-")
+            reasons[i].append("Similar story and mood") 
 
     years = df["year"].to_numpy(dtype=float)
     if config.get("year_mode") == "hard":
